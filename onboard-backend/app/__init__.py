@@ -6,8 +6,10 @@ def create_app():
     CORS(app)
     
     # Register blueprints
-    from app.routes import employees, tasks
+    from app.routes import employees, tasks, predictions, auth
     app.register_blueprint(employees.bp)
     app.register_blueprint(tasks.bp)
+    app.register_blueprint(predictions.bp)
+    app.register_blueprint(auth.bp)
     
     return app

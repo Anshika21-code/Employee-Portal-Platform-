@@ -45,5 +45,9 @@ export const deleteTask = async (id) => {
   const response = await api.delete(`/tasks/${id}`);
   return response.data;
 };
+export const getPrediction = async (employeeId) => {
+    const response = await api.get(`/predict/employee/${employeeId}`);
+    return response.data;
+};
 
 export default api;

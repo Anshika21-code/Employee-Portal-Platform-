@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getEmployees, getEmployeeTasks, createEmployee } from '../services/api';
+import { getEmployees, getEmployeeTasks, createEmployee, getPrediction } from '../services/api';
 import ProgressBar from '../components/ProgressBar';
 import StatusBadge from '../components/StatusBadge';
 
@@ -24,29 +24,30 @@ export default function Admin() {
     try {
       const employeesData = await getEmployees();
       
-      // Fetch tasks for each employee to calculate progress
-      const employeesWithTasks = await Promise.all(
+      // Fetch tasks AND AI predictions for each employee
+      const employeesWithData = await Promise.all(
         employeesData.map(async (emp) => {
-          const tasks = await getEmployeeTasks(emp.id);
+          const [tasks, prediction] = await Promise.all([
+            getEmployeeTasks(emp.id),
+            getPrediction(emp.id)
+          ]);
+          
           const completed = tasks.filter(t => t.status === 'Completed').length;
           const progress = tasks.length > 0 ? Math.round((completed / tasks.length) * 100) : 0;
-          
-          // Simple AI status based on progress
-          let aiStatus = 'on-track';
-          if (progress < 30) aiStatus = 'delayed';
-          else if (progress < 70) aiStatus = 'at-risk';
           
           return {
             ...emp,
             totalTasks: tasks.length,
             completedTasks: completed,
             progress,
-            aiStatus
+            aiStatus: prediction.status,
+            aiConfidence: prediction.confidence,
+            overdueTasksCount: prediction.metrics.overdue_tasks
           };
         })
       );
       
-      setEmployeesWithProgress(employeesWithTasks);
+      setEmployeesWithProgress(employeesWithData);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -80,8 +81,8 @@ export default function Admin() {
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Admin Panel</h1>
-            <p className="text-gray-600 mt-1">Manage all employee onboarding progress</p>
+            <h1 className="text-3xl font-bold text-gray-900"> AI-Powered Admin Panel</h1>
+            <p className="text-gray-600 mt-1">Monitor all employee onboarding with AI insights</p>
           </div>
           <button
             onClick={() => setShowAddEmployee(!showAddEmployee)}
@@ -98,7 +99,7 @@ export default function Admin() {
             <div className="text-3xl font-bold text-gray-900">{employeesWithProgress.length}</div>
           </div>
           <div className="bg-green-50 rounded-lg shadow p-6">
-            <div className="text-sm text-green-600 mb-1">On Track</div>
+            <div className="text-sm text-green-600 mb-1"> On Track</div>
             <div className="text-3xl font-bold text-green-700">
               {employeesWithProgress.filter(e => e.aiStatus === 'on-track').length}
             </div>
@@ -110,7 +111,7 @@ export default function Admin() {
             </div>
           </div>
           <div className="bg-red-50 rounded-lg shadow p-6">
-            <div className="text-sm text-red-600 mb-1">Delayed</div>
+            <div className="text-sm text-red-600 mb-1"> Delayed</div>
             <div className="text-3xl font-bold text-red-700">
               {employeesWithProgress.filter(e => e.aiStatus === 'delayed').length}
             </div>
@@ -197,13 +198,13 @@ export default function Admin() {
                     Department
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Start Date
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Progress
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    AI Status
+                     AI Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Overdue
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
@@ -230,9 +231,6 @@ export default function Admin() {
                       <div className="text-sm text-gray-900">{employee.department}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{employee.start_date}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
                       <div className="w-32">
                         <ProgressBar percentage={employee.progress} />
                         <div className="text-xs text-gray-500 mt-1">
@@ -241,7 +239,19 @@ export default function Admin() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <StatusBadge status={employee.aiStatus} />
+                      <div>
+                        <StatusBadge status={employee.aiStatus} />
+                        <p className="text-xs text-gray-500 mt-1">
+                          {employee.aiConfidence}% confidence
+                        </p>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`text-sm font-semibold ${
+                        employee.overdueTasksCount > 0 ? 'text-red-600' : 'text-green-600'
+                      }`}>
+                        {employee.overdueTasksCount > 0 ? `${employee.overdueTasksCount} tasks` : '0'}
+                      </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <Link

@@ -1,26 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import {
-  getEmployee,
-  getEmployeeTasks,
-  updateTask,
-  deleteTask,
-  createTask,
-  getPrediction
-} from '../services/api';
+import { getEmployee, getEmployeeTasks, updateTask, deleteTask, createTask } from '../services/api';
 import TaskCard from '../components/TaskCard';
 import ProgressBar from '../components/ProgressBar';
-import StatusBadge from '../components/StatusBadge';
 
 export default function EmployeeDetail() {
   const { id } = useParams();
-  const { canEdit } = useAuth();
-  const canEditEmployee = canEdit(parseInt(id));
-
   const [employee, setEmployee] = useState(null);
   const [tasks, setTasks] = useState([]);
-  const [prediction, setPrediction] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showAddTask, setShowAddTask] = useState(false);
   const [newTask, setNewTask] = useState({
@@ -36,24 +23,22 @@ export default function EmployeeDetail() {
 
   const fetchEmployeeData = async () => {
     try {
-      const [empData, tasksData, predictionData] = await Promise.all([
+      const [empData, tasksData] = await Promise.all([
         getEmployee(id),
-        getEmployeeTasks(id),
-        getPrediction(id)
+        getEmployeeTasks(id)
       ]);
       setEmployee(empData);
-      setTasks(tasksData || []);
-      setPrediction(predictionData || null);
+      setTasks(tasksData);
     } catch (error) {
-      console.error('Error fetching employee data:', error);
+      console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
     }
   };
 
   const calculateProgress = () => {
-    if (!tasks || tasks.length === 0) return 0;
-    const completed = tasks.filter(t => t.status === 'Completed').length;
+    if (tasks.length === 0) return 0;
+    const completed = tasks.filter(task => task.status === 'Completed').length;
     return Math.round((completed / tasks.length) * 100);
   };
 
@@ -63,8 +48,6 @@ export default function EmployeeDetail() {
       setTasks(tasks.map(task =>
         task.id === taskId ? { ...task, status: newStatus } : task
       ));
-      const predictionData = await getPrediction(id);
-      setPrediction(predictionData || null);
     } catch (error) {
       console.error('Error updating task:', error);
     }
@@ -72,11 +55,10 @@ export default function EmployeeDetail() {
 
   const handleDeleteTask = async (taskId) => {
     if (!window.confirm('Are you sure you want to delete this task?')) return;
+    
     try {
       await deleteTask(taskId);
       setTasks(tasks.filter(task => task.id !== taskId));
-      const predictionData = await getPrediction(id);
-      setPrediction(predictionData || null);
     } catch (error) {
       console.error('Error deleting task:', error);
     }
@@ -89,12 +71,7 @@ export default function EmployeeDetail() {
       await createTask(taskData);
       await fetchEmployeeData();
       setShowAddTask(false);
-      setNewTask({
-        title: '',
-        description: '',
-        due_date: '',
-        status: 'Not Started'
-      });
+      setNewTask({ title: '', description: '', due_date: '', status: 'Not Started' });
     } catch (error) {
       console.error('Error creating task:', error);
     }
@@ -103,52 +80,40 @@ export default function EmployeeDetail() {
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <div className="text-xl text-gray-600">Loading employee data...</div>
+        <div className="text-xl text-gray-600">Loading...</div>
       </div>
     );
   }
 
   if (!employee) {
     return (
-      <div className="text-center py-12">
-        <p className="text-red-600 text-xl">Employee not found</p>
+      <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <div className="text-center py-12">
+          <p className="text-red-600 text-xl">Employee not found</p>
+        </div>
       </div>
     );
   }
 
   const progress = calculateProgress();
 
-  //  SAFE AI FALLBACKS (THIS FIXES YOUR CRASH)
-  const metrics = prediction?.metrics ?? {
-    completion_rate: progress,
-    days_elapsed: 0,
-    overdue_tasks: 0,
-    total_tasks: tasks.length
-  };
-
-  const recommendations = prediction?.recommendations ?? [];
-
   return (
     <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-
       {/* Employee Header */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">{employee.name}</h1>
-            <p className="text-gray-600">
-              {employee.department} • {employee.email}
-            </p>
-          </div>
-
-          {prediction && (
-            <div className="text-right">
-              <StatusBadge status={prediction.status} />
-              <p className="text-xs text-gray-500 mt-1">
-                AI Confidence: {prediction.confidence ?? 0}%
-              </p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+              <span className="text-blue-600 font-bold text-2xl">
+                {employee.name.charAt(0)}
+              </span>
             </div>
-          )}
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">{employee.name}</h1>
+              <p className="text-gray-600">{employee.department} • {employee.email}</p>
+              <p className="text-sm text-gray-500">Started: {employee.start_date}</p>
+            </div>
+          </div>
         </div>
 
         <div className="mt-6">
@@ -157,109 +122,87 @@ export default function EmployeeDetail() {
             <span className="font-semibold">{progress}%</span>
           </div>
           <ProgressBar percentage={progress} />
-        </div>
-      </div>
-
-      {/* AI Insights */}
-      <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg shadow-md p-6 mb-6 border-l-4 border-purple-500">
-        <h2 className="text-xl font-bold mb-4">AI Insights</h2>
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-          <div className="bg-white p-3 rounded-lg shadow">
-            <p className="text-xs text-gray-500">Completion Rate</p>
-            <p className="text-lg font-bold text-blue-600">
-              {metrics.completion_rate}%
-            </p>
-          </div>
-          <div className="bg-white p-3 rounded-lg shadow">
-            <p className="text-xs text-gray-500">Days Elapsed</p>
-            <p className="text-lg font-bold text-purple-600">
-              {metrics.days_elapsed}
-            </p>
-          </div>
-          <div className="bg-white p-3 rounded-lg shadow">
-            <p className="text-xs text-gray-500">Overdue Tasks</p>
-            <p className="text-lg font-bold text-red-600">
-              {metrics.overdue_tasks}
-            </p>
-          </div>
-          <div className="bg-white p-3 rounded-lg shadow">
-            <p className="text-xs text-gray-500">Total Tasks</p>
-            <p className="text-lg font-bold text-gray-700">
-              {metrics.total_tasks}
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-white p-4 rounded-lg shadow">
-          <h3 className="font-semibold mb-2"> Recommendations</h3>
-          {recommendations.length === 0 ? (
-            <p className="text-sm text-gray-500">
-              No AI recommendations yet.
-            </p>
-          ) : (
-            <ul className="space-y-1">
-              {recommendations.map((rec, index) => (
-                <li key={index} className="text-sm text-gray-700">
-                  • {rec}
-                </li>
-              ))}
-            </ul>
-          )}
+          <p className="text-xs text-gray-500 mt-2">
+            {tasks.filter(t => t.status === 'Completed').length} of {tasks.length} tasks completed
+          </p>
         </div>
       </div>
 
       {/* Tasks Section */}
       <div className="bg-white rounded-lg shadow-md p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold">Tasks</h2>
-          {canEditEmployee && (
-            <button
-              onClick={() => setShowAddTask(!showAddTask)}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg"
-            >
-              {showAddTask ? 'Cancel' : '+ Add Task'}
-            </button>
-          )}
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-900">Tasks</h2>
+          <button
+            onClick={() => setShowAddTask(!showAddTask)}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            {showAddTask ? 'Cancel' : '+ Add Task'}
+          </button>
         </div>
 
+        {/* Add Task Form */}
         {showAddTask && (
-          <form onSubmit={handleAddTask} className="mb-6 space-y-3">
-            <input
-              className="w-full border p-2 rounded"
-              placeholder="Task title"
-              value={newTask.title}
-              onChange={(e) =>
-                setNewTask({ ...newTask, title: e.target.value })
-              }
-              required
-            />
-            <textarea
-              className="w-full border p-2 rounded"
-              placeholder="Description"
-              value={newTask.description}
-              onChange={(e) =>
-                setNewTask({ ...newTask, description: e.target.value })
-              }
-            />
-            <button className="bg-green-600 text-white px-4 py-2 rounded">
-              Create Task
-            </button>
+          <form onSubmit={handleAddTask} className="bg-gray-50 p-4 rounded-lg mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Task Title *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newTask.title}
+                  onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Due Date
+                </label>
+                <input
+                  type="date"
+                  value={newTask.due_date}
+                  onChange={(e) => setNewTask({ ...newTask, due_date: e.target.value })}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Description
+              </label>
+              <textarea
+                value={newTask.description}
+                onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+                rows="3"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div className="mt-4">
+              <button
+                type="submit"
+                className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors"
+              >
+                Create Task
+              </button>
+            </div>
           </form>
         )}
 
+        {/* Tasks List */}
         {tasks.length === 0 ? (
-          <p className="text-gray-500 text-center py-6">
-            No tasks assigned yet
-          </p>
+          <div className="text-center py-12">
+            <p className="text-gray-500">No tasks assigned yet</p>
+          </div>
         ) : (
           <div className="space-y-4">
-            {tasks.map(task => (
+            {tasks.map((task) => (
               <TaskCard
                 key={task.id}
                 task={task}
-                onStatusChange={canEditEmployee ? handleStatusChange : null}
-                onDelete={canEditEmployee ? handleDeleteTask : null}
+                onStatusChange={handleStatusChange}
+                onDelete={handleDeleteTask}
               />
             ))}
           </div>

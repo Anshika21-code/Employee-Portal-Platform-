@@ -4,6 +4,7 @@ from flask_cors import CORS
 def create_app():
     app = Flask(__name__)
     CORS(app)
+    CORS(app, resources={r"/*": {"origins": "*"}})
     
     # Register blueprints
     from app.routes import employees, tasks, predictions, auth
@@ -13,3 +14,4 @@ def create_app():
     app.register_blueprint(auth.bp)
     
     return app
+    

@@ -71,4 +71,15 @@ export const getPrediction = async (employeeId) => {
   return response.data;
 };
 
+export const getDailyPerformance = async (
+  employeeId,
+  startDate,
+  endDate
+) => {
+  const res = await fetch(
+    `/api/performance/daily?employee_id=${employeeId}&start_date=${startDate}&end_date=${endDate}`
+  );
+  return res.json();
+};
+
 export default api;

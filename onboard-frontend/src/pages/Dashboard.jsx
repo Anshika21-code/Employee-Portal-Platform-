@@ -3,6 +3,7 @@ import ProgressBar from '../components/ProgressBar';
 import PerformanceChart from "../components/PerformanceChart";
 import TaskCompletionChart from "../components/TaskCompletionChart";
 import EmployeeRankTable from "../components/EmployeeRankTable";
+import Header from '../components/layout/Header';
 
 export default function Dashboard() {
   const [employee, setEmployee] = useState(null);
@@ -34,17 +35,7 @@ export default function Dashboard() {
     <div className="max-w-7xl mx-auto px-6 py-6 bg-gray-50 min-h-screen">
 
       {/* ===== Header ===== */}
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-2xl font-semibold">
-          Hi {employee.name}
-        </h1>
-
-        <div className="flex items-center gap-4">
-          {/* Insert search bar here */}
-          {/* Insert notification icon here */}
-          {/* Insert profile icon here */}
-        </div>
-      </div>
+      <Header/>
 
       {/* ===== Top Cards ===== */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">

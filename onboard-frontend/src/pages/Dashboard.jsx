@@ -51,6 +51,7 @@ import {
   Bell,
   Zap,
 } from "lucide-react";
+// import { UserButton } from "@clerk/clerk-react"
 
 const stats = [
   {
@@ -198,6 +199,9 @@ export default function Dashboard() {
             <Zap size={15} />
             AI Insights
           </button>
+          {/* <div className="p-4">
+  <UserButton afterSignOutUrl="/" />
+</div> */}
         </div>
       </div>
 

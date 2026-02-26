@@ -758,9 +758,9 @@ export default function Employees() {
   };
 
   // ── Toggle task panel ──
-  const toggleExpand = (empId) => {
-    setExpandedId(expandedId === empId ? null : empId);
-  };
+const toggleExpand = (empId) => {
+  setExpandedId(prev => prev === empId ? null : empId);
+};
 
   // ── Add/remove/update task rows ──
   const addTaskRow    = () => setTasks([...tasks, { title: "", description: "", due_date: "" }]);

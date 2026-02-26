@@ -31,12 +31,15 @@
 #     return app
 
 # app/__init__.py
+
+
 from flask import Flask
 from flask_cors import CORS
 from app.models.database import db
 from app.routes.employees import employees_bp
 from app.routes.tasks import tasks_bp
 from app.routes.dashboard import dashboard_bp
+from app.routes.predictions import predictions_bp  # ← ADD THIS
 
 def create_app():
     app = Flask(__name__)
@@ -49,4 +52,5 @@ def create_app():
     app.register_blueprint(employees_bp, url_prefix="/api")
     app.register_blueprint(tasks_bp, url_prefix="/api")
     app.register_blueprint(dashboard_bp, url_prefix="/api")
+    app.register_blueprint(predictions_bp, url_prefix="/api")  # ← ADD THIS
     return app

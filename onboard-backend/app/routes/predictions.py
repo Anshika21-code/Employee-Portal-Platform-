@@ -1,205 +1,90 @@
-# from flask import Blueprint, jsonify, request
-# from app.models.database import get_db
-# from datetime import datetime
-# import sqlite3
+from flask import Blueprint, jsonify
+from app.models.database import Employee, Task
+from app.ml.model import predict_status, train_model
+from datetime import date
+
+predictions_bp = Blueprint("predictions", __name__)
 
 
-# bp = Blueprint('predictions', __name__, url_prefix='/api/predict')
-
-# @bp.route('/employee/<int:employee_id>', methods=['GET'])
-# def predict_employee_status(employee_id):
-#     """Predict status for a specific employee"""
-#     try:
-#         conn = get_db()
-        
-#         # Get employee info
-#         employee = conn.execute(
-#             'SELECT * FROM employees WHERE id = ?', (employee_id,)
-#         ).fetchone()
-        
-#         if not employee:
-#             return jsonify({'error': 'Employee not found'}), 404
-        
-#         # Get all tasks for employee
-#         tasks = conn.execute(
-#             'SELECT * FROM tasks WHERE employee_id = ?', (employee_id,)
-#         ).fetchall()
-        
-#         conn.close()
-        
-#         if len(tasks) == 0:
-#             return jsonify({
-#                 'employee_id': employee_id,
-#                 'status': 'on-track',
-#                 'confidence': 100.0,
-#                 'message': 'No tasks assigned yet',
-#                 'recommendations': ['Assign onboarding tasks to begin tracking']
-#             })
-        
-#         # Calculate features
-#         total_tasks = len(tasks)
-#         completed_tasks = len([t for t in tasks if t['status'] == 'Completed'])
-#         completion_rate = completed_tasks / total_tasks if total_tasks > 0 else 0
-        
-#         # Calculate days elapsed
-#         start_date = datetime.strptime(employee['start_date'], '%Y-%m-%d')
-#         days_elapsed = (datetime.now() - start_date).days
-        
-#         # Count overdue tasks
-#         overdue_tasks = 0
-#         for task in tasks:
-#             if task['due_date'] and task['status'] != 'Completed':
-#                 try:
-#                     due_date = datetime.strptime(task['due_date'], '%Y-%m-%d')
-#                     if due_date < datetime.now():
-#                         overdue_tasks += 1
-#                 except:
-#                     pass
-        
-#         # Simple rule-based prediction (we'll add ML later)
-#         if completion_rate > 0.7 and overdue_tasks <= 1:
-#             status = 'on-track'
-#             recommendations = [
-#                 "✅ Employee is progressing well",
-#                 "Continue current pace"
-#             ]
-#         elif completion_rate < 0.5 or overdue_tasks >= 3:
-#             status = 'delayed'
-#             recommendations = [
-#                 "🚨 Immediate attention required",
-#                 "Schedule 1-on-1 meeting with HR",
-#                 f"Focus on completing {overdue_tasks} overdue tasks"
-#             ]
-#         else:
-#             status = 'at-risk'
-#             recommendations = [
-#                 "⚠️ Monitor progress closely",
-#                 "Check if employee needs support",
-#                 "Consider extending deadlines"
-#             ]
-        
-#         return jsonify({
-#             'employee_id': employee_id,
-#             'employee_name': employee['name'],
-#             'status': status,
-#             'confidence': 85.0,
-#             'recommendations': recommendations,
-#             'metrics': {
-#                 'completion_rate': round(completion_rate * 100, 2),
-#                 'days_elapsed': days_elapsed,
-#                 'overdue_tasks': overdue_tasks,
-#                 'total_tasks': total_tasks,
-#                 'completed_tasks': completed_tasks
-#             }
-#         })
-    
-#     except Exception as e:
-#         return jsonify({'error': str(e)}), 500  
-
-
-from flask import Blueprint, jsonify, request
-from app.models.database import get_db
-from datetime import datetime
-
-bp = Blueprint('predictions', __name__, url_prefix='/api/predict')
-
-# =====================================================
-# EXISTING API — EMPLOYEE STATUS PREDICTION (UNCHANGED)
-# =====================================================
-@bp.route('/employee/<int:employee_id>', methods=['GET'])
-def predict_employee_status(employee_id):
+@predictions_bp.route("/predict/train", methods=["POST"])
+def train():
+    """Endpoint to retrain the model"""
     try:
-        conn = get_db()
+        train_model()
+        return jsonify({"message": "Model trained successfully!"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-        employee = conn.execute(
-            'SELECT * FROM employees WHERE id = ?', (employee_id,)
-        ).fetchone()
 
-        if not employee:
-            return jsonify({'error': 'Employee not found'}), 404
+@predictions_bp.route("/predict/employee/<int:employee_id>", methods=["GET"])
+def predict_employee(employee_id):
+    """Predict status for a single employee"""
+    try:
+        emp = Employee.query.get_or_404(employee_id)
+        today = date.today()
 
-        tasks = conn.execute(
-            'SELECT * FROM tasks WHERE employee_id = ?', (employee_id,)
-        ).fetchall()
+        total = len(emp.tasks)
+        completed = sum(1 for t in emp.tasks if t.status == "Completed")
+        overdue = sum(
+            1 for t in emp.tasks
+            if t.due_date and t.due_date < today and t.status != "Completed"
+        )
+        progress = round((completed / total) * 100) if total > 0 else 0
+        days_since_joining = (today - emp.joined_date).days if emp.joined_date else 0
 
-        if len(tasks) == 0:
-            return jsonify({
-                'employee_id': employee_id,
-                'status': 'on-track',
-                'confidence': 100,
-                'message': 'No tasks assigned yet'
-            })
-
-        total_tasks = len(tasks)
-        completed_tasks = len([t for t in tasks if t['status'] == 'Completed'])
-        completion_rate = completed_tasks / total_tasks
-
-        start_date = datetime.strptime(employee['start_date'], '%Y-%m-%d')
-        days_elapsed = (datetime.now() - start_date).days
-
-        overdue_tasks = 0
-        for task in tasks:
-            if task['due_date'] and task['status'] != 'Completed':
-                due_date = datetime.strptime(task['due_date'], '%Y-%m-%d')
-                if due_date < datetime.now():
-                    overdue_tasks += 1
-
-        if completion_rate > 0.7 and overdue_tasks <= 1:
-            status = 'on-track'
-        elif completion_rate < 0.5 or overdue_tasks >= 3:
-            status = 'delayed'
-        else:
-            status = 'at-risk'
+        prediction, confidence = predict_status(
+            progress, total, completed, overdue, days_since_joining
+        )
 
         return jsonify({
-            'employee_id': employee_id,
-            'employee_name': employee['name'],
-            'status': status,
-            'metrics': {
-                'completion_rate': round(completion_rate * 100, 2),
-                'days_elapsed': days_elapsed,
-                'overdue_tasks': overdue_tasks
+            "employee_id": employee_id,
+            "name": emp.name,
+            "prediction": prediction,
+            "confidence": confidence,
+            "features": {
+                "progress": progress,
+                "tasks_total": total,
+                "tasks_completed": completed,
+                "tasks_overdue": overdue,
+                "days_since_joining": days_since_joining
             }
-        })
+        }), 200
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        print("Prediction error:", e)
+        return jsonify({"error": str(e)}), 500
 
 
-# =====================================================
-# NEW API — DAILY PERFORMANCE (FOR CHART TOOLTIP)
-# =====================================================
-@bp.route('/performance/daily', methods=['GET'])
-def get_daily_performance():
-    """
-    Query params:
-    employee_id, start_date (YYYY-MM-DD), end_date (YYYY-MM-DD)
-    """
+@predictions_bp.route("/predict/all", methods=["GET"])
+def predict_all():
+    """Predict status for all employees"""
     try:
-        employee_id = request.args.get('employee_id')
-        start_date = request.args.get('start_date')
-        end_date = request.args.get('end_date')
+        employees = Employee.query.all()
+        today = date.today()
+        results = []
 
-        conn = get_db()
+        for emp in employees:
+            total = len(emp.tasks)
+            completed = sum(1 for t in emp.tasks if t.status == "Completed")
+            overdue = sum(
+                1 for t in emp.tasks
+                if t.due_date and t.due_date < today and t.status != "Completed"
+            )
+            progress = round((completed / total) * 100) if total > 0 else 0
+            days_since_joining = (today - emp.joined_date).days if emp.joined_date else 0
 
-        rows = conn.execute("""
-            SELECT date, tasks_done, hours_worked, performance_score
-            FROM daily_performance
-            WHERE employee_id = ?
-              AND date BETWEEN ? AND ?
-            ORDER BY date ASC
-        """, (employee_id, start_date, end_date)).fetchall()
+            prediction, confidence = predict_status(
+                progress, total, completed, overdue, days_since_joining
+            )
 
-        data = []
-        for r in rows:
-            data.append({
-                "date": r["date"],
-                "tasks_done": r["tasks_done"],
-                "hours_worked": r["hours_worked"],
-                "performance": r["performance_score"]
+            results.append({
+                "employee_id": emp.id,
+                "name": emp.name,
+                "prediction": prediction,
+                "confidence": confidence
             })
 
-        return jsonify(data)
+        return jsonify(results), 200
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({"error": str(e)}), 500

@@ -59,15 +59,15 @@ export default function Employees() {
   });
 
   // Replace existing form states with these:
-const [showForm, setShowForm] = useState(false);
-const [step, setStep] = useState(1); // 1 = employee details, 2 = assign tasks
-const [formData, setFormData] = useState({
-  name: "", role: "", department: "", joined_date: "", remarks: ""
-});
-const [tasks, setTasks] = useState([
+  const [showForm, setShowForm] = useState(false);
+  const [step, setStep] = useState(1); // 1 = employee details, 2 = assign tasks
+  const [formData, setFormData] = useState({
+  name: "", role: "", department: "", joined_date: "", remarks: ""});
+  const [tasks, setTasks] = useState([
   { title: "", description: "", due_date: "" }
 ]);
-const [newEmpId, setNewEmpId] = useState(null);
+  const [newEmpId, setNewEmpId] = useState(null);
+  const [openMenuId, setOpenMenuId] = useState(null);
 
 // Add/remove task rows
 const addTaskRow = () => {
@@ -174,17 +174,14 @@ const handleSaveTasks = async () => {
 // };
 
 const handleDelete = async (id) => {
+  if (!window.confirm("Are you sure you want to delete this employee?")) return; // ← safety confirm
   try {
     const res = await fetch(`http://127.0.0.1:5000/api/employees/${id}`, {
       method: "DELETE",
     });
-
-    if (!res.ok) {
-      throw new Error("Delete failed");
-    }
-
+    if (!res.ok) throw new Error("Delete failed");
     setEmployees(prev => prev.filter(emp => emp.id !== id));
-
+    setOpenMenuId(null);
   } catch (error) {
     console.error("Error deleting employee:", error);
   }
@@ -276,32 +273,18 @@ useEffect(() => {
             onChange={(e) => setFormData({ ...formData, department: e.target.value })}
             className="border border-gray-200 p-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
           />
-          {/* <label className="absolute -top-2 left-3 bg-white px-1 text-xs text-gray-400">
-    Date of Joining
-  </label>
-          {/* <input
-            type="date"
-            value={formData.joined_date}
-            onChange={(e) => setFormData({ ...formData, joined_date: e.target.value })}
-            className="border border-gray-200 p-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
-          /> */}
-          {/* <input
-    type="date"
-    value={formData.joined_date}
-    onChange={(e) => setFormData({ ...formData, joined_date: e.target.value })}
-    className="w-full border border-gray-200 p-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
-  /> */} 
-  <div className="relative">
-  <label className="absolute -top-2 left-3 bg-white px-1 text-xs text-gray-400">
-    Date of Joining
-  </label>
-  <input
-    type="date"
-    value={formData.joined_date}
-    onChange={(e) => setFormData({ ...formData, joined_date: e.target.value })}
-    className="w-full border border-gray-200 p-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
-  />
-</div>
+           
+          <div className="relative">
+              <label className="absolute -top-2 left-3 bg-white px-1 text-xs text-gray-400">
+                Date of Joining
+              </label>
+              <input
+                type="date"
+                value={formData.joined_date}
+                onChange={(e) => setFormData({ ...formData, joined_date: e.target.value })}
+                className="w-full border border-gray-200 p-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              />
+          </div>
           <input
             type="text" placeholder="Remarks"
             value={formData.remarks}
@@ -439,66 +422,87 @@ useEffect(() => {
       </div>
 
       {/* Employee Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-        {filtered.map((emp, i) => {
-          const cfg = statusConfig[emp.status];
-          const StatusIcon = cfg.icon;
-          return (
-            <div
-              key={emp.id}
-              className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow"
-            >
-              {/* Card Header */}
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${avatarColors[i % avatarColors.length]} flex items-center justify-center text-white text-sm font-bold`}>
-                    {emp.avatar}
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-800 text-sm">{emp.name}</p>
-                    <p className="text-xs text-gray-400">{emp.role}</p>
-                  </div>
-                </div>
-                <button className="p-1 rounded-lg hover:bg-gray-100 transition-colors">
-                  <MoreHorizontal size={16} className="text-gray-400" />
-                </button>
-              </div>
-
-              {/* Status Badge */}
-              <div className="flex items-center justify-between mb-3">
-                <span className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${cfg.badge}`}>
-                  <StatusIcon size={11} />
-                  {cfg.label}
-                </span>
-                <span className="text-xs text-gray-400">{emp.department}</span>
-              </div>
-
-              {/* Progress */}
-              <div className="mb-4">
-                <div className="flex justify-between text-xs text-gray-500 mb-1.5">
-                <span>Tasks: {emp.tasks_total}</span>
-                  <span className="font-semibold">{emp.progress}%</span>
-                </div>
-                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full ${cfg.bar} transition-all duration-700`}
-                    style={{ width: `${emp.progress}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* Footer */}
-              <div className="flex items-center justify-between pt-3 border-t border-gray-50">
-              <span className="text-xs text-gray-400">Joined {emp.joined_date}</span>
-                <button className="flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-800 font-medium transition-colors">
-                  <Mail size={12} />
-                  Nudge
-                </button>
-              </div>
+<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+  {filtered.map((emp, i) => {
+    const cfg = statusConfig[emp.status];
+    const StatusIcon = cfg.icon;
+    return (
+      <div
+        key={emp.id}
+        className="relative bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow"
+      >
+        {/* Card Header */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${avatarColors[i % avatarColors.length]} flex items-center justify-center text-white text-sm font-bold`}>
+              {emp.avatar}
             </div>
-          );
-        })}
+            <div>
+              <p className="font-semibold text-gray-800 text-sm">{emp.name}</p>
+              <p className="text-xs text-gray-400">{emp.role}</p>
+            </div>
+          </div>
+
+          {/* Three dots menu - fixed position */}
+          <div className="relative">
+            <button
+              onClick={() => setOpenMenuId(openMenuId === emp.id ? null : emp.id)}
+              className="p-1 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <MoreHorizontal size={16} className="text-gray-400" />
+            </button>
+
+            {openMenuId === emp.id && (
+              <div className="absolute right-0 top-8 bg-white border border-gray-100 rounded-xl shadow-lg z-20 w-36 py-1">
+                <button
+                  onClick={() => {
+                    handleDelete(emp.id);
+                    setOpenMenuId(null);
+                  }}
+                  className="w-full text-left text-bold px-4 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors"
+                >
+                   Delete Employee
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Status Badge */}
+        <div className="flex items-center justify-between mb-3">
+          <span className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${cfg.badge}`}>
+            <StatusIcon size={11} />
+            {cfg.label}
+          </span>
+          <span className="text-xs text-gray-400">{emp.department}</span>
+        </div>
+
+        {/* Progress */}
+        <div className="mb-4">
+          <div className="flex justify-between text-xs text-gray-500 mb-1.5">
+            <span>Tasks: {emp.tasks_total}</span>
+            <span className="font-semibold">{emp.progress}%</span>
+          </div>
+          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full ${cfg.bar} transition-all duration-700`}
+              style={{ width: `${emp.progress}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between pt-3 border-t border-gray-50">
+          <span className="text-xs text-gray-400">Joined {emp.joined_date}</span>
+          <button className="flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-800 font-medium transition-colors">
+            <Mail size={12} />
+            Nudge
+          </button>
+        </div>
       </div>
+    );
+  })}
+</div>
 
       {filtered.length === 0 && (
         <div className="text-center py-16 text-gray-400">

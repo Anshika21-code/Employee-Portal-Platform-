@@ -68,12 +68,13 @@
 #     db.session.commit()
 
 #     return jsonify({"message": "Task deleted"})
-
 from flask import Blueprint, request, jsonify
-from app.models.database import db, Task
+from app.models.database import db, Task, Employee
 from datetime import datetime
 
 tasks_bp = Blueprint("tasks", __name__)
+
+# ── YOUR EXISTING ROUTES (unchanged) ──────────────────────────
 
 @tasks_bp.route("/tasks", methods=["GET"])
 def get_tasks():
@@ -87,10 +88,11 @@ def get_tasks():
         "employee_id": t.employee_id
     } for t in tasks])
 
+
 @tasks_bp.route("/tasks/bulk", methods=["POST"])
 def create_bulk_tasks():
     try:
-        data = request.json  # expects { employee_id, tasks: [...] }
+        data = request.json
         employee_id = data.get("employee_id")
         tasks = data.get("tasks", [])
 
@@ -115,3 +117,69 @@ def create_bulk_tasks():
         db.session.rollback()
         print("Bulk tasks error:", e)
         return jsonify({"error": str(e)}), 500
+
+
+# ── NEW ROUTES (add these) ──────────────────────────────────────
+
+# GET /api/tasks/employee/<id>  → fetch all tasks for one employee
+@tasks_bp.route("/tasks/employee/<int:employee_id>", methods=["GET"])
+def get_tasks_by_employee(employee_id):
+    tasks = Task.query.filter_by(employee_id=employee_id).all()
+    return jsonify([{
+        "id": t.id,
+        "title": t.title,
+        "description": t.description,
+        "due_date": t.due_date.strftime("%Y-%m-%d") if t.due_date else "",
+        "status": t.status,
+        "employee_id": t.employee_id
+    } for t in tasks])
+
+
+# PATCH /api/tasks/<id>/status  → HR updates task status
+# Body: { "status": "In Progress" | "Completed" | "Not Started" }
+@tasks_bp.route("/tasks/<int:task_id>/status", methods=["PATCH"])
+def update_task_status(task_id):
+    task = Task.query.get(task_id)
+    if not task:
+        return jsonify({"error": "Task not found"}), 404
+
+    data = request.get_json()
+    new_status = data.get("status")
+
+    allowed = ["Not Started", "In Progress", "Completed"]
+    if new_status not in allowed:
+        return jsonify({"error": f"Status must be one of: {allowed}"}), 400
+
+    task.status = new_status
+    db.session.commit()
+
+    # Recalculate progress % for this employee
+    employee = Employee.query.get(task.employee_id)
+    all_tasks = Task.query.filter_by(employee_id=task.employee_id).all()
+    total = len(all_tasks)
+    completed = sum(1 for t in all_tasks if t.status == "Completed")
+    progress = round((completed / total) * 100) if total > 0 else 0
+
+    # Derive AI status from progress + overdue count
+    today = datetime.utcnow().date()
+    overdue = sum(
+        1 for t in all_tasks
+        if t.due_date and t.due_date < today and t.status != "Completed"
+    )
+    if overdue >= 3 or progress < 30:
+        ai_status = "delayed"
+    elif overdue >= 1 or progress < 60:
+        ai_status = "at-risk"
+    else:
+        ai_status = "on-track"
+
+    return jsonify({
+        "task": {
+            "id": task.id,
+            "status": task.status,
+            "title": task.title,
+            "employee_id": task.employee_id
+        },
+        "employee_progress": progress,   # ← React uses this to update progress bar live
+        "ai_status": ai_status           # ← React uses this to update badge live
+    }), 200

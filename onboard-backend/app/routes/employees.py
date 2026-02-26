@@ -1,34 +1,86 @@
-from flask import Blueprint, jsonify, request
-from app.models.database import get_db
+from flask import Blueprint, request, jsonify
+from app.models.database import db, Employee
+from datetime import datetime
 
-bp = Blueprint('employees', __name__, url_prefix='/api/employees')
+employees_bp = Blueprint("employees", __name__)
 
-@bp.route('', methods=['GET'])
+
+# =========================
+# GET EMPLOYEES
+# =========================
+
+@employees_bp.route("/employees", methods=["GET"])
 def get_employees():
-    conn = get_db()
-    employees = conn.execute('SELECT * FROM employees').fetchall()
-    conn.close()
-    return jsonify([dict(emp) for emp in employees])
+    employees = Employee.query.all()
 
-@bp.route('/<int:id>', methods=['GET'])
-def get_employee(id):
-    conn = get_db()
-    employee = conn.execute('SELECT * FROM employees WHERE id = ?', (id,)).fetchone()
-    conn.close()
-    if employee:
-        return jsonify(dict(employee))
-    return jsonify({'error': 'Employee not found'}), 404
+    data = []
+    for emp in employees:
+        data.append({
+            "id": emp.id,
+            "name": emp.name,
+            "role": emp.role,
+            "department": emp.department,
+            "joined_date": emp.joined_date.strftime("%Y-%m-%d") if emp.joined_date else "",
+            "progress": 0,
+            "tasks_completed": 0,
+            "tasks_total": 0,
+            "status": "on-track"
+        })
 
-@bp.route('', methods=['POST'])
+    return jsonify(data)
+
+
+# =========================
+# CREATE EMPLOYEE
+# =========================
+
+# @employees_bp.route("/api/employees", methods=["POST"])
+# def create_employee():
+#     data = request.json
+
+#     new_emp = Employee(
+#         name=data["name"],
+#         role=data["role"],
+#         department=data.get("department"),
+#         joined_date=datetime.strptime(data["joined_date"], "%Y-%m-%d"),
+#         remarks=data.get("remarks")
+#     )
+
+#     db.session.add(new_emp)
+#     db.session.commit()
+
+#     return jsonify({"message": "Employee created"}), 201
+
+@employees_bp.route("/employees", methods=["POST"])
 def create_employee():
     data = request.json
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute('''
-        INSERT INTO employees (name, email, department, start_date)
-        VALUES (?, ?, ?, ?)
-    ''', (data['name'], data['email'], data.get('department'), data.get('start_date')))
-    conn.commit()
-    employee_id = cursor.lastrowid
-    conn.close()
-    return jsonify({'id': employee_id, 'message': 'Employee created'}), 201
+
+    joined_date = None
+    if data.get("joined_date"):
+        joined_date = datetime.strptime(data["joined_date"], "%Y-%m-%d")
+
+    new_emp = Employee(
+        name=data["name"],
+        role=data["role"],
+        department=data.get("department"),
+        joined_date=joined_date,
+        remarks=data.get("remarks")
+    )
+
+    db.session.add(new_emp)
+    db.session.commit()
+
+    return jsonify({"message": "Employee created"}), 201
+
+# =========================
+# DELETE EMPLOYEE
+# =========================
+
+@employees_bp.route("/employees/<int:id>", methods=["DELETE"])
+def delete_employee(id):
+    employee = Employee.query.get_or_404(id)
+
+    db.session.delete(employee)
+    db.session.commit()
+
+    return jsonify({"message": "Employee deleted"})

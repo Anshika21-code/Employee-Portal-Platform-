@@ -1,45 +1,70 @@
 from flask import Blueprint, jsonify, request
-from app.models.database import get_db
+from app.models.database import db, Task, Employee
+from datetime import datetime
 
-bp = Blueprint('tasks', __name__, url_prefix='/api/tasks')
+tasks_bp = Blueprint("tasks", __name__, url_prefix="/api/tasks")
 
-@bp.route('/employee/<int:employee_id>', methods=['GET'])
+# =========================
+# GET TASKS OF AN EMPLOYEE
+# =========================
+@tasks_bp.route("/employee/<int:employee_id>", methods=["GET"])
 def get_employee_tasks(employee_id):
-    conn = get_db()
-    tasks = conn.execute('SELECT * FROM tasks WHERE employee_id = ?', (employee_id,)).fetchall()
-    conn.close()
-    return jsonify([dict(task) for task in tasks])
+    tasks = Task.query.filter_by(employee_id=employee_id).all()
 
-@bp.route('', methods=['POST'])
+    return jsonify([
+        {
+            "id": t.id,
+            "title": t.title,
+            "status": t.status,
+            "employee_id": t.employee_id
+        }
+        for t in tasks
+    ])
+
+
+# =========================
+# CREATE TASK
+# =========================
+@tasks_bp.route("/", methods=["POST"])
 def create_task():
     data = request.json
-    conn = get_db()
-    cursor = conn.cursor()
-    cursor.execute('''
-        INSERT INTO tasks (employee_id, title, description, status, due_date)
-        VALUES (?, ?, ?, ?, ?)
-    ''', (data['employee_id'], data['title'], data.get('description'), 
-          data.get('status', 'Not Started'), data.get('due_date')))
-    conn.commit()
-    task_id = cursor.lastrowid
-    conn.close()
-    return jsonify({'id': task_id, 'message': 'Task created'}), 201
 
-@bp.route('/<int:id>', methods=['PUT'])
+    new_task = Task(
+        title=data["title"],
+        description=data.get("description"),
+        due_date=datetime.strptime(data["due_date"], "%Y-%m-%d"),
+        employee_id=data["employee_id"],
+        status="Not Started"
+    )
+
+    db.session.add(new_task)
+    db.session.commit()
+
+    return jsonify({"message": "Task created"}), 201
+
+# =========================
+# UPDATE TASK
+# =========================
+@tasks_bp.route("/<int:id>", methods=["PUT"])
 def update_task(id):
+    task = Task.query.get_or_404(id)
     data = request.json
-    conn = get_db()
-    conn.execute('''
-        UPDATE tasks SET status = ? WHERE id = ?
-    ''', (data['status'], id))
-    conn.commit()
-    conn.close()
-    return jsonify({'message': 'Task updated'})
 
-@bp.route('/<int:id>', methods=['DELETE'])
+    task.status = data.get("status", task.status)
+
+    db.session.commit()
+
+    return jsonify({"message": "Task updated"})
+
+
+# =========================
+# DELETE TASK
+# =========================
+@tasks_bp.route("/<int:id>", methods=["DELETE"])
 def delete_task(id):
-    conn = get_db()
-    conn.execute('DELETE FROM tasks WHERE id = ?', (id,))
-    conn.commit()
-    conn.close()
-    return jsonify({'message': 'Task deleted'})
+    task = Task.query.get_or_404(id)
+
+    db.session.delete(task)
+    db.session.commit()
+
+    return jsonify({"message": "Task deleted"})

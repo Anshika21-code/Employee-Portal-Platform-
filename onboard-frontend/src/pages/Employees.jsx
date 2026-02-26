@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Search,
   Filter,
   UserPlus,
+  Users,   
   CheckCircle2,
   AlertTriangle,
   Clock,
@@ -11,80 +12,6 @@ import {
   MoreHorizontal,
 } from "lucide-react";
 
-const employees = [
-  {
-    id: 1,
-    name: "Aarav Mehta",
-    role: "Frontend Developer",
-    department: "Engineering",
-    avatar: "AM",
-    progress: 85,
-    status: "on-track",
-    joined: "Feb 20, 2026",
-    email: "aarav@company.com",
-    tasks: "17/20",
-  },
-  {
-    id: 2,
-    name: "Priya Sharma",
-    role: "Data Analyst",
-    department: "Analytics",
-    avatar: "PS",
-    progress: 45,
-    status: "at-risk",
-    joined: "Feb 18, 2026",
-    email: "priya@company.com",
-    tasks: "9/20",
-  },
-  {
-    id: 3,
-    name: "Rohan Gupta",
-    role: "Backend Engineer",
-    department: "Engineering",
-    avatar: "RG",
-    progress: 20,
-    status: "delayed",
-    joined: "Feb 15, 2026",
-    email: "rohan@company.com",
-    tasks: "4/20",
-  },
-  {
-    id: 4,
-    name: "Sneha Patel",
-    role: "UI/UX Designer",
-    department: "Design",
-    avatar: "SP",
-    progress: 95,
-    status: "on-track",
-    joined: "Feb 22, 2026",
-    email: "sneha@company.com",
-    tasks: "19/20",
-  },
-  {
-    id: 5,
-    name: "Kabir Singh",
-    role: "DevOps Engineer",
-    department: "Infrastructure",
-    avatar: "KS",
-    progress: 60,
-    status: "at-risk",
-    joined: "Feb 17, 2026",
-    email: "kabir@company.com",
-    tasks: "12/20",
-  },
-  {
-    id: 6,
-    name: "Neha Joshi",
-    role: "Product Manager",
-    department: "Product",
-    avatar: "NJ",
-    progress: 10,
-    status: "delayed",
-    joined: "Feb 24, 2026",
-    email: "neha@company.com",
-    tasks: "2/20",
-  },
-];
 
 const statusConfig = {
   "on-track": {
@@ -119,6 +46,7 @@ const avatarColors = [
 export default function Employees() {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [employees, setEmployees] = useState([]);
 
   const filtered = employees.filter((emp) => {
     const matchesSearch =
@@ -129,6 +57,96 @@ export default function Employees() {
       filterStatus === "all" || emp.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
+
+  const [showForm, setShowForm] = useState(false);
+const [formData, setFormData] = useState({
+  name: "",
+  role: "",
+  department: "",
+  joined_date: "",
+  remarks: "",
+});
+
+const handleAddEmployee = async () => {
+  try {
+    const res = await fetch("http://127.0.0.1:5000/api/employees", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(formData),
+    });
+
+    if (!res.ok) {
+      throw new Error("Failed to add employee");
+    }
+
+    // Reload employees cleanly
+    const refresh = await fetch("http://127.0.0.1:5000/api/employees");
+    const data = await refresh.json();
+
+    setEmployees(data);
+
+    setShowForm(false);
+    setFormData({
+      name: "",
+      role: "",
+      department: "",
+      joined_date: "",
+      remarks: "",
+    });
+
+  } catch (error) {
+    console.error("Error adding employee:", error);
+  }
+};
+
+const handleDelete = async (id) => {
+  try {
+    const res = await fetch(`http://127.0.0.1:5000/api/employees/${id}`, {
+      method: "DELETE",
+    });
+
+    if (!res.ok) {
+      throw new Error("Delete failed");
+    }
+
+    setEmployees(prev => prev.filter(emp => emp.id !== id));
+
+  } catch (error) {
+    console.error("Error deleting employee:", error);
+  }
+};
+
+useEffect(() => {
+  const loadEmployees = async () => {
+    try {
+      const res = await fetch("http://127.0.0.1:5000/api/employees");
+
+      if (!res.ok) {
+        throw new Error("Failed to fetch employees");
+      }
+
+      const data = await res.json();
+
+      // Safety fallback so UI never crashes
+      const normalized = data.map(emp => ({
+        ...emp,
+        status: emp.status || "on-track",
+        progress: emp.progress || 0,
+        tasks_total: emp.tasks_total || 0,
+        avatar: emp.name ? emp.name.charAt(0).toUpperCase() : "E"
+      }));
+
+      setEmployees(normalized);
+
+    } catch (err) {
+      console.error("Error loading employees:", err);
+    }
+  };
+
+  loadEmployees();
+}, []);
 
   return (
     <div className="min-h-screen bg-[#f5f6fa] p-6 font-sans">
@@ -142,11 +160,73 @@ export default function Employees() {
             {employees.length} total employees in onboarding
           </p>
         </div>
-        <button className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-xl shadow-sm transition-colors">
+        <button onClick={() => setShowForm(true)} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-xl shadow-sm transition-colors">
           <UserPlus size={15} />
           Add Employee
         </button>
       </div>
+
+      {showForm && (
+  <div className="bg-white p-4 rounded-xl shadow mb-6">
+    <div className="grid grid-cols-2 gap-3">
+      <input
+        type="text"
+        placeholder="Name"
+        value={formData.name}
+        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+        className="border p-2 rounded"
+      />
+      <input
+        type="text"
+        placeholder="Role"
+        value={formData.role}
+        onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+        className="border p-2 rounded"
+      />
+      <input
+        type="text"
+        placeholder="Department"
+        value={formData.department}
+        onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+        className="border p-2 rounded"
+      />
+      <input
+        type="date"
+        value={formData.joined_date}
+        onChange={(e) => setFormData({ ...formData, joined_date: e.target.value })}
+        className="border p-2 rounded"
+      />
+      <input
+  type="text"
+  placeholder="Remarks"
+  value={formData.remarks}
+  onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
+  className="border p-2 rounded col-span-2"
+/>
+    </div>
+
+    <div className="mt-3 flex gap-2">
+      <button
+        onClick={handleAddEmployee}
+        className="bg-indigo-600 text-white px-4 py-2 rounded"
+      >
+        Save
+      </button>
+      <button
+        onClick={() => setShowForm(false)}
+        className="bg-gray-200 px-4 py-2 rounded"
+      >
+        Cancel
+      </button>
+      {/* <button
+  onClick={() => handleDelete(emp.id)}
+  className="text-red-500 text-xs"
+>
+  Delete
+</button> */}
+    </div>
+  </div>
+)}
 
       {/* Filters */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-6 flex flex-col sm:flex-row gap-3">
@@ -232,7 +312,7 @@ export default function Employees() {
               {/* Progress */}
               <div className="mb-4">
                 <div className="flex justify-between text-xs text-gray-500 mb-1.5">
-                  <span>Tasks: {emp.tasks}</span>
+                <span>Tasks: {emp.tasks_total}</span>
                   <span className="font-semibold">{emp.progress}%</span>
                 </div>
                 <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
@@ -245,7 +325,7 @@ export default function Employees() {
 
               {/* Footer */}
               <div className="flex items-center justify-between pt-3 border-t border-gray-50">
-                <span className="text-xs text-gray-400">Joined {emp.joined}</span>
+              <span className="text-xs text-gray-400">Joined {emp.joined_date}</span>
                 <button className="flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-800 font-medium transition-colors">
                   <Mail size={12} />
                   Nudge

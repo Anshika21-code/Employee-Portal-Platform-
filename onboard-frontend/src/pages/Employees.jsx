@@ -68,6 +68,7 @@ export default function Employees() {
 ]);
   const [newEmpId, setNewEmpId] = useState(null);
   const [openMenuId, setOpenMenuId] = useState(null);
+  const [predictions, setPredictions] = useState({});
 
 // Add/remove task rows
 const addTaskRow = () => {
@@ -138,40 +139,7 @@ const handleSaveTasks = async () => {
     console.error("Error saving tasks:", error);
   }
 };
-
-// const handleAddEmployee = async () => {
-//   try {
-//     const res = await fetch("http://127.0.0.1:5000/api/employees", {
-//       method: "POST",
-//       headers: {
-//         "Content-Type": "application/json",
-//       },
-//       body: JSON.stringify(formData),
-//     });
-
-//     if (!res.ok) {
-//       throw new Error("Failed to add employee");
-//     }
-
-//     // Reload employees cleanly
-//     const refresh = await fetch("http://127.0.0.1:5000/api/employees");
-//     const data = await refresh.json();
-
-//     setEmployees(data);
-
-//     setShowForm(false);
-//     setFormData({
-//       name: "",
-//       role: "",
-//       department: "",
-//       joined_date: "",
-//       remarks: "",
-//     });
-
-//   } catch (error) {
-//     console.error("Error adding employee:", error);
-//   }
-// };
+    
 
 const handleDelete = async (id) => {
   if (!window.confirm("Are you sure you want to delete this employee?")) return; // ← safety confirm
@@ -215,6 +183,20 @@ useEffect(() => {
   };
 
   loadEmployees();
+}, []);
+
+useEffect(() => {
+  fetch("http://127.0.0.1:5000/api/predict/all")
+    .then(res => res.json())
+    .then(data => {
+      // Convert array to object keyed by employee_id for easy lookup
+      const predMap = {};
+      data.forEach(p => {
+        predMap[p.employee_id] = p;
+      });
+      setPredictions(predMap);
+    })
+    .catch(err => console.error("Prediction error:", err));
 }, []);
 
   return (
@@ -325,24 +307,19 @@ useEffect(() => {
                 onChange={(e) => updateTask(index, "description", e.target.value)}
                 className="col-span-5 border border-gray-200 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
               />
-              {/* <input
-                type="date"
-                value={task.due_date}
-                onChange={(e) => updateTask(index, "due_date", e.target.value)}
-                className="col-span-3 border border-gray-200 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
-              /> */}
+          
               <div className="relative col-span-3">
-  <label className="absolute -top-2 left-3 bg-white px-1 text-xs text-gray-400">
-    Due Date
-  </label>
-  <input
-    type="date"
-    required
-    value={task.due_date}
-    onChange={(e) => updateTask(index, "due_date", e.target.value)}
-    className="w-full border border-gray-200 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
-  />
-</div>
+                  <label className="absolute -top-2 left-3 bg-white px-1 text-xs text-gray-400">
+                     Due Date
+                   </label>
+                      <input
+                        type="date"
+                        required
+                        value={task.due_date}
+                        onChange={(e) => updateTask(index, "due_date", e.target.value)}
+                        className="w-full border border-gray-200 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
+                      />
+              </div>
               <button onClick={() => removeTaskRow(index)}
                 className="col-span-1 text-red-400 hover:text-red-600 text-lg font-bold flex items-center justify-center pt-1">
                 ×
@@ -476,6 +453,17 @@ useEffect(() => {
           </span>
           <span className="text-xs text-gray-400">{emp.department}</span>
         </div>
+
+        {/* AI Prediction Badge */}
+          {predictions[emp.id] && (
+            <div className="flex items-center gap-1.5 mb-3">
+              <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-600 flex items-center gap-1.5">
+                🤖 AI: {predictions[emp.id].prediction === "on-track" ? "On Track" : 
+                         predictions[emp.id].prediction === "at-risk" ? "At Risk" : "Delayed"}
+                <span className="text-indigo-400">({predictions[emp.id].confidence}%)</span>
+              </span>
+            </div>
+          )}
 
         {/* Progress */}
         <div className="mb-4">

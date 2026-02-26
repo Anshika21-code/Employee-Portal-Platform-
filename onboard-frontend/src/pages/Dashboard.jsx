@@ -13,35 +13,6 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
-// const employees = [
-//   {
-//     name: "Aarav Mehta",
-//     role: "Frontend Developer",
-//     avatar: "AM",
-//     progress: 85,
-//     status: "on-track",
-//     joined: "Feb 20",
-//     tasks: "17/20",
-//   },
-//   {
-//     name: "Priya Sharma",
-//     role: "Data Analyst",
-//     avatar: "PS",
-//     progress: 45,
-//     status: "at-risk",
-//     joined: "Feb 18",
-//     tasks: "9/20",
-//   },
-//   {
-//     name: "Rohan Gupta",
-//     role: "Backend Engineer",
-//     avatar: "RG",
-//     progress: 20,
-//     status: "delayed",
-//     joined: "Feb 15",
-//     tasks: "4/20",
-//   },
-// ];
 
 const recentActivity = [
   { msg: "Priya Sharma completed Document Upload", time: "2m ago", type: "success" },
@@ -81,6 +52,7 @@ export default function Dashboard() {
   const [dashboardData, setDashboardData] = useState(null);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [employees, setEmployees] = useState([]);
+  const [predictions, setPredictions] = useState({});
 
   // Live Date
   useEffect(() => {
@@ -111,6 +83,17 @@ export default function Dashboard() {
         setEmployees(normalized);
       })
       .catch(err => console.error(err));
+  }, []);
+
+  useEffect(() => {
+    fetch("http://127.0.0.1:5000/api/predict/all")
+      .then(res => res.json())
+      .then(data => {
+        const predMap = {};
+        data.forEach(p => { predMap[p.employee_id] = p; });
+        setPredictions(predMap);
+      })
+      .catch(err => console.error("Prediction error:", err));
   }, []);
 
   //  FIXED: Stats INSIDE component
@@ -219,7 +202,7 @@ export default function Dashboard() {
 
             return (
               <div
-                key={emp.name}
+                key={emp.id}
                 onMouseEnter={() => setHoveredRow(i)}
                 onMouseLeave={() => setHoveredRow(null)}
                 className={`px-6 py-4 ${
@@ -231,21 +214,28 @@ export default function Dashboard() {
                     {emp.avatar}
                   </div>
                   <div className="flex-1">
-                    <div className="flex justify-between mb-1">
-                      <div>
-                        <span className="font-semibold text-sm">
-                          {emp.name}
+                  <div className="flex justify-between mb-1">
+                    <div>
+                      <span className="font-semibold text-sm">
+                        {emp.name}
+                      </span>
+                      <span className="text-gray-400 text-xs ml-2">
+                        {emp.role}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {/* AI Badge */}
+                      {predictions[emp.id] && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 font-medium">
+                          🤖 {predictions[emp.id].confidence}%
                         </span>
-                        <span className="text-gray-400 text-xs ml-2">
-                          {emp.role}
-                        </span>
-                      </div>
-                      <span
-                        className={`text-xs px-2 py-0.5 rounded-full ${cfg.badge}`}
-                      >
+                      )}
+                      {/* Status Badge */}
+                      <span className={`text-xs px-2 py-0.5 rounded-full flex items-center gap-1 ${cfg.badge}`}>
                         <StatusIcon size={11} /> {cfg.label}
                       </span>
                     </div>
+                  </div>
                     <div className="h-1.5 bg-gray-100 rounded-full">
                       <div
                         className={`${cfg.bar} h-full rounded-full`}
@@ -254,6 +244,7 @@ export default function Dashboard() {
                     </div>
                   </div>
                 </div>
+                
               </div>
             );
           })}

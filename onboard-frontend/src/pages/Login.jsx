@@ -21,7 +21,7 @@ export default function Login() {
 </div>
 
       {/* Right Side Clerk */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-card">
         <div className="max-w-md w-full text-center">
 
           <SignIn

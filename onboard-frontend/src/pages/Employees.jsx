@@ -933,6 +933,7 @@ export default function Employees() {
         avatar:      emp.name ? emp.name.charAt(0).toUpperCase() : "E",
       }));
       setEmployees(normalized);
+      navigate("/dashboard");
     } catch (err) {
       console.error("Error loading employees:", err);
     }

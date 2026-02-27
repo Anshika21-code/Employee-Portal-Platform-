@@ -12,6 +12,8 @@ import {
   Zap,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useLocation } from "react-router-dom";
+
 
 const statusConfig = {
   "on-track": {
@@ -59,12 +61,14 @@ export default function Dashboard() {
   }, []);
 
   // Fetch dashboard stats
-  useEffect(() => {
-    fetch("http://127.0.0.1:5000/api/dashboard/stats")
-      .then(res => res.json())
-      .then(data => setDashboardData(data))
-      .catch(err => console.error(err));
-  }, []);
+  const location = useLocation();
+
+useEffect(() => {
+  fetch("http://127.0.0.1:5000/api/dashboard/stats")
+    .then(res => res.json())
+    .then(data => setDashboardData(data))
+    .catch(err => console.error(err));
+}, [location.pathname]);
 
   // Fetch employees
   useEffect(() => {
@@ -112,7 +116,12 @@ export default function Dashboard() {
     },
     {
       label: "New Joiners",
-      value: dashboardData?.new_joiners || 0,
+      value: employees.filter(emp => {
+        const joinDate = new Date(emp.joined_date);
+        const now = new Date();
+        const diff = (now - joinDate) / (1000 * 60 * 60 * 24);
+        return diff <= 7; // joined within last 7 days
+      }).length,
       icon: Users,
       bg: "bg-emerald-50",
       text: "text-emerald-600",
@@ -239,7 +248,7 @@ export default function Dashboard() {
                         <span>{emp.progress}%</span>
                       </div>
 
-                      <div className="h-2 bg-gray-100 rounded-full">
+                      <div className="h-2 bg-white rounded-full">
                         <div
                           className={`${cfg.bar} h-full rounded-full`}
                           style={{ width: `${emp.progress}%` }}

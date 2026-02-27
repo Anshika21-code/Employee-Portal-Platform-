@@ -128,7 +128,7 @@ function AppContent() {
 
 export default function App() {
   return (
-    <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
+    <div className="min-h-screen bg-background text-foreground transition-colors duration-300 dark:bg-gradient-to-br dark:from-[#0f172a] dark:via-[#0b1220] dark:to-[#0a0f1c]">
       <AppContent />
     </div>
   );

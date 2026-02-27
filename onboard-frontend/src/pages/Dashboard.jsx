@@ -64,12 +64,12 @@ export default function Dashboard() {
   // Fetch dashboard stats
   const location = useLocation();
 
-useEffect(() => {
-  fetch(`${API_BASE_URL}/api/dashboard/activity`)
-    .then(res => res.json())
-    .then(data => setDashboardData(data))
-    .catch(err => console.error(err));
-}, [location.pathname]);
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/api/dashboard/stats`)
+      .then(res => res.json())
+      .then(data => setDashboardData(data))
+      .catch(err => console.error(err));
+  }, [location.pathname]);
 
   // Fetch employees
   useEffect(() => {
@@ -191,7 +191,7 @@ useEffect(() => {
           <div className="px-6 py-4 border-b flex justify-between items-center">
             <div className="flex items-center gap-2">
               <BarChart3 size={18} className="text-indigo-500" />
-              <h2 className="font-semibold text-gray-800">New Hire Progress</h2>
+              <h2 className="font-semibold">New Hire Progress</h2>
             </div>
             <Link to="/employees" className="text-indigo-600 text-sm flex items-center gap-1">
               View all <ChevronRight size={14} />

@@ -108,18 +108,18 @@ function TaskPanel({ employeeId, onProgressUpdate }) {
 
   //  Early returns AFTER all hooks
   if (loading) return (
-    <div className="px-4 py-3 text-xs text-gray-400 animate-pulse">Loading tasks...</div>
+    <div className="px-4 py-3 text-xs text-muted animate-pulse">Loading tasks...</div>
   );
 
   if (tasks.length === 0) return (
-    <div className="px-4 py-3 text-xs text-gray-400">No tasks assigned yet.</div>
+    <div className="px-4 py-3 text-xs text-muted">No tasks assigned yet.</div>
   );
 
   return (
     <div className="border-t border-border pt-3 mt-2">
       {/* Mini summary */}
       <div className="flex gap-3 mb-3 text-xs">
-        <span className="text-gray-400">{tasks.length} tasks total</span>
+        <span className="text-muted">{tasks.length} tasks total</span>
         <span className="text-emerald-600">✓ {completed} done</span>
         {inProgress > 0 && (
           <span className="text-blue-600 flex items-center gap-1">
@@ -142,11 +142,11 @@ function TaskPanel({ employeeId, onProgressUpdate }) {
                 ${task.status === "Completed" ? "bg-emerald-50" : "bg-gray-50"}`}
             >
               <div className="flex-1 min-w-0">
-                <p className={`font-medium text-xs truncate ${task.status === "Completed" ? "line-through text-gray-400" : "text-gray-700"}`}>
+                <p className={`font-medium text-xs truncate ${task.status === "Completed" ? "line-through text-muted" : "text-gray-700"}`}>
                   {task.title}
                 </p>
                 {task.due_date && (
-                  <p className={`text-xs mt-0.5 ${isOverdue ? "text-red-500 font-medium" : "text-gray-400"}`}>
+                  <p className={`text-xs mt-0.5 ${isOverdue ? "text-red-500 font-medium" : "text-muted"}`}>
                     {isOverdue ? " Overdue · " : "Due: "}{task.due_date}
                   </p>
                 )}
@@ -160,7 +160,7 @@ function TaskPanel({ employeeId, onProgressUpdate }) {
                 <div className="absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none z-10">
                   {task.status === "Completed"   && <CheckCircle2 size={14} className="text-emerald-500" />}
                   {task.status === "In Progress" && <RefreshCw    size={14} className="text-blue-500" />}
-                  {task.status === "Not Started" && <Circle       size={14} className="text-gray-400" />}
+                  {task.status === "Not Started" && <Circle       size={14} className="text-muted" />}
                 </div>
                 <select
                   value={task.status}
@@ -172,7 +172,7 @@ function TaskPanel({ employeeId, onProgressUpdate }) {
                   <option value="In Progress">In Progress</option>
                   <option value="Completed">Completed</option>
                 </select>
-                <ChevronDown size={12} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none z-10" />
+                <ChevronDown size={12} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none z-10" />
               </div>
             </div>
           );
@@ -340,7 +340,7 @@ export default function Employees() {
               {step > 1 ? "✓" : "1"} Employee Details
             </div>
             <div className="h-px w-6 bg-gray-200" />
-            <div className={`flex items-center gap-2 text-sm font-medium px-3 py-1.5 rounded-full ${step === 2 ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-400"}`}>
+            <div className={`flex items-center gap-2 text-sm font-medium px-3 py-1.5 rounded-full ${step === 2 ? "bg-indigo-600 text-white" : "bg-gray-100 text-muted"}`}>
               2 Assign Tasks
             </div>
           </div>
@@ -352,7 +352,7 @@ export default function Employees() {
                 <input type="text" placeholder="Role" value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value })} className="input-field" />
                 <input type="text" placeholder="Department" value={formData.department} onChange={(e) => setFormData({ ...formData, department: e.target.value })} className="input-field" />
                 <div className="relative">
-                  <label className="absolute -top-2 left-3 bg-card px-1 text-xs text-gray-400">Date of Joining</label>
+                  <label className="absolute -top-2 left-3 bg-card px-1 text-xs  text-muted">Date of Joining</label>
                   <input type="date" value={formData.joined_date} onChange={(e) => setFormData({ ...formData, joined_date: e.target.value })} className="input-field" />
                 </div>
                 <input type="text" placeholder="Remarks" value={formData.remarks} onChange={(e) => setFormData({ ...formData, remarks: e.target.value })} className="input-field" />
@@ -373,7 +373,7 @@ export default function Employees() {
                     <input type="text" placeholder="Task title *" value={task.title} onChange={(e) => updateTask(index, "title", e.target.value)} className="input-field" />
                     <input type="text" placeholder="Description" value={task.description} onChange={(e) => updateTask(index, "description", e.target.value)} className="input-field" />
                     <div className="relative col-span-3">
-                      <label className="absolute -top-2 left-3 bg-card px-1 text-xs text-gray-400">Due Date</label>
+                      <label className="absolute -top-2 left-3 bg-card px-1 text-xs  text-muted">Due Date</label>
                       <input type="date" value={task.due_date} onChange={(e) => updateTask(index, "due_date", e.target.value)} className="input-field" />
                     </div>
                     <button onClick={() => removeTaskRow(index)} className="col-span-1 text-red-400 hover:text-red-600 text-lg font-bold flex items-center justify-center pt-1">×</button>
@@ -384,7 +384,7 @@ export default function Employees() {
               <div className="flex gap-2">
                 <button onClick={handleSaveTasks} className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm px-5 py-2.5 rounded-xl font-medium transition-colors">Save & Finish ✓</button>
                 <button onClick={() => setStep(1)} className="bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm px-5 py-2.5 rounded-xl font-medium transition-colors">← Back</button>
-                <button onClick={handleSaveTasks} className="text-gray-400 hover:text-gray-600 text-sm px-3 py-2.5 transition-colors">Skip tasks</button>
+                <button onClick={handleSaveTasks} className="text-muted hover:text-gray-600 text-sm px-3 py-2.5 transition-colors">Skip tasks</button>
               </div>
             </div>
           )}
@@ -404,14 +404,14 @@ export default function Employees() {
           />
         </div>
         <div className="relative">
-          <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
           <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="pl-8 pr-8 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 appearance-none bg-card cursor-pointer">
             <option value="all">All Status</option>
             <option value="on-track">On Track</option>
             <option value="at-risk">At Risk</option>
             <option value="delayed">Delayed</option>
           </select>
-          <ChevronDown size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+          <ChevronDown size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
         </div>
       </div>
 
@@ -447,13 +447,13 @@ export default function Employees() {
                     {emp.avatar}
                   </div>
                   <div>
-                    <p className="font-semibold text-gray-800 text-sm">{emp.name}</p>
-                    <p className="text-xs text-gray-400">{emp.role}</p>
+                    <p className="font-semibold text-foreground text-sm">{emp.name}</p>
+                    <p className="text-xs text-muted">{emp.role}</p>
                   </div>
                 </div>
                 <div className="relative">
                   <button onClick={() => setOpenMenuId(openMenuId === emp.id ? null : emp.id)} className="p-1 rounded-lg hover:bg-gray-100 transition-colors">
-                    <MoreHorizontal size={16} className="text-gray-400" />
+                    <MoreHorizontal size={16} className="text-muted" />
                   </button>
                   {openMenuId === emp.id && (
                     <div className="absolute right-0 top-8 bg-card border border-border rounded-xl shadow-lg z-20 w-36 py-1">
@@ -471,7 +471,7 @@ export default function Employees() {
                   <StatusIcon size={11} />
                   {cfg.label}
                 </span>
-                <span className="text-xs text-gray-400">{emp.department}</span>
+                <span className="text-xs text-muted">{emp.department}</span>
               </div>
 
               {/* AI Prediction Badge */}
@@ -498,7 +498,7 @@ export default function Employees() {
 
               {/* Footer */}
               <div className="flex items-center justify-between pt-3 border-t border-border">
-                <span className="text-xs text-gray-400">Joined {emp.joined_date}</span>
+                <span className="text-xs text-muted">Joined {emp.joined_date}</span>
                 <div className="flex items-center gap-2">
                   <button className="flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-800 font-medium transition-colors">
                     <Mail size={12} />
@@ -528,7 +528,7 @@ export default function Employees() {
       </div>
 
       {filtered.length === 0 && (
-        <div className="text-center py-16 text-gray-400">
+        <div className="text-center py-16 text-muted">
           <Users size={40} className="mx-auto mb-3 opacity-30" />
           <p className="font-medium">No employees found</p>
           <p className="text-sm">Try adjusting your search or filter</p>

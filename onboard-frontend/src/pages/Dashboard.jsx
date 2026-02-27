@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useLocation } from "react-router-dom";
+import { API_BASE_URL } from "../config";
 
 
 const statusConfig = {
@@ -64,7 +65,7 @@ export default function Dashboard() {
   const location = useLocation();
 
 useEffect(() => {
-  fetch("http://127.0.0.1:5000/api/dashboard/stats")
+  fetch(`${API_BASE_URL}/api/dashboard/activity`)
     .then(res => res.json())
     .then(data => setDashboardData(data))
     .catch(err => console.error(err));
@@ -72,7 +73,7 @@ useEffect(() => {
 
   // Fetch employees
   useEffect(() => {
-    fetch("http://127.0.0.1:5000/api/employees")
+    fetch(`${API_BASE_URL}/api/employees`)
       .then(res => res.json())
       .then(data => {
         const normalized = data.map(emp => ({
@@ -88,7 +89,7 @@ useEffect(() => {
 
   // Fetch predictions
   useEffect(() => {
-    fetch("http://127.0.0.1:5000/api/predict/all")
+    fetch(`${API_BASE_URL}/api/predict/all`)
       .then(res => res.json())
       .then(data => {
         const map = {};
@@ -100,7 +101,7 @@ useEffect(() => {
 
   // Fetch activity
   useEffect(() => {
-    fetch("http://127.0.0.1:5000/api/dashboard/activity")
+    fetch(`${API_BASE_URL}/api/dashboard/activity`)
       .then(res => res.json())
       .then(data => setActivities(data))
       .catch(err => console.error(err));

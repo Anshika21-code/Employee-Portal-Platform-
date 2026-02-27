@@ -14,6 +14,7 @@ import {
   Mail,
   MoreHorizontal,
 } from "lucide-react";
+import { API_BASE_URL } from "../config";
 
 // ─────────────────────────────────────────────────────────────
 //  Config
@@ -64,7 +65,7 @@ function TaskPanel({ employeeId, onProgressUpdate }) {
 
   
   useEffect(() => {
-    fetch(`http://127.0.0.1:5000/api/tasks/employee/${employeeId}`)
+    fetch(`${API_BASE_URL}/api/tasks/employee/${employeeId}`)
       .then(res => res.json())
       .then(data => {
         setTasks(data);
@@ -83,7 +84,7 @@ function TaskPanel({ employeeId, onProgressUpdate }) {
   const handleStatusChange = async (taskId, newStatus) => {
     setUpdating(taskId);
     try {
-      const res = await fetch(`http://127.0.0.1:5000/api/tasks/${taskId}`, {
+      const res = await fetch(`${API_BASE_URL}/api/tasks/${taskId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
@@ -204,7 +205,7 @@ export default function Employees() {
 
   //  Load predictions on mount
   useEffect(() => {
-    fetch("http://127.0.0.1:5000/api/predict/all")
+    fetch(`${API_BASE_URL}/api/predict/all`)
       .then(res => res.json())
       .then(data => {
         const predMap = {};
@@ -217,7 +218,7 @@ export default function Employees() {
   // Reusable fetch function (used on mount + after adding employee)
   const loadEmployees = async () => {
     try {
-      const res = await fetch("http://127.0.0.1:5000/api/employees");
+      const res = await fetch(`${API_BASE_URL}/api/employees`);
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
       const normalized = data.map(emp => ({
@@ -268,7 +269,7 @@ export default function Employees() {
   const handleSaveEmployee = async () => {
     if (!formData.name) return alert("Name is required");
     try {
-      const res = await fetch("http://127.0.0.1:5000/api/employees", {
+      const res = await fetch(`${API_BASE_URL}/api/employees`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
@@ -286,7 +287,7 @@ export default function Employees() {
     try {
       const validTasks = tasks.filter(t => t.title.trim() !== "");
       if (validTasks.length > 0) {
-        const res = await fetch("http://127.0.0.1:5000/api/tasks/bulk", {
+        const res = await fetch(`${API_BASE_URL}/api/tasks/bulk`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ employee_id: newEmpId, tasks: validTasks }),
@@ -307,7 +308,7 @@ export default function Employees() {
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this employee?")) return;
     try {
-      const res = await fetch(`http://127.0.0.1:5000/api/employees/${id}`, { method: "DELETE" });
+      const res = await fetch(`${API_BASE_URL}/api/employees/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Delete failed");
       setEmployees(prev => prev.filter(emp => emp.id !== id));
       setOpenMenuId(null);

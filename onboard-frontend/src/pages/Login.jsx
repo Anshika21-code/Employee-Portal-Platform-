@@ -6,7 +6,9 @@ export default function Login() {
   const { isSignedIn, isLoaded } = useUser();
 
   if (!isLoaded) return null;
-  if (isSignedIn) return <Navigate to="/dashboard" replace />;
+  if (isSignedIn) {
+    return <Navigate to="/dashboard" replace />;
+  } 
 
   return (
     <div className="min-h-screen flex">

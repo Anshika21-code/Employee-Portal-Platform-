@@ -270,7 +270,7 @@ useEffect(() => {
             <div className="px-6 py-4 border-b flex justify-between items-center">
               <div className="flex items-center gap-2">
                 <Zap size={18} className="text-amber-500" />
-                <h2 className="font-semibold text-gray-800">Recent Activity</h2>
+                <h2 className="font-semibold text-white-800">Recent Activity</h2>
               </div>
               <span className="text-xs bg-emerald-100 text-emerald-600 px-2 py-1 rounded-full">
                 Live
